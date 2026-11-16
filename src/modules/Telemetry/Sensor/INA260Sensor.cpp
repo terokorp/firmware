@@ -26,13 +26,29 @@ void INA260Sensor::setup() {}
 
 bool INA260Sensor::getMetrics(meshtastic_Telemetry *measurement)
 {
-    measurement->variant.environment_metrics.has_voltage = true;
-    measurement->variant.environment_metrics.has_current = true;
+    switch (measurement->which_variant) {
+        // To be depreciated in favor of PowerMetrics in Meshtastic 3.x
+        // see proto/meshtastic/telemetry.proto for details
+        case meshtastic_Telemetry_environment_metrics_tag:
+            measurement->variant.environment_metrics.has_voltage = true;
+            measurement->variant.environment_metrics.has_current = true;
+            // mV conversion to V
+            measurement->variant.environment_metrics.voltage = ina260.readBusVoltage() / 1000;
+            measurement->variant.environment_metrics.current = ina260.readCurrent();
+            return true;
 
-    // mV conversion to V
-    measurement->variant.environment_metrics.voltage = ina260.readBusVoltage() / 1000;
-    measurement->variant.environment_metrics.current = ina260.readCurrent();
-    return true;
+        // PowerMetrics is the preferred way to report voltage and current in Meshtastic 3.x
+        case meshtastic_Telemetry_power_metrics_tag:
+            measurement->variant.power_metrics.has_ch1_voltage = true;
+            measurement->variant.power_metrics.has_ch1_current = true;
+            // mV conversion to V
+            measurement->variant.power_metrics.ch1_voltage = ina260.readBusVoltage() / 1000; // Should this use getBusVoltageMv() instead?
+            measurement->variant.power_metrics.ch1_current = ina260.readCurrent(); // Should this use getCurrentMa() instead?
+            return true;
+    }
+
+    // unsupported metric
+    return false;
 }
 
 uint16_t INA260Sensor::getBusVoltageMv()
