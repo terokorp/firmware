@@ -32,11 +32,21 @@ void INA219Sensor::setup() {}
 
 bool INA219Sensor::getMetrics(meshtastic_Telemetry *measurement)
 {
-    measurement->variant.environment_metrics.has_voltage = true;
-    measurement->variant.environment_metrics.has_current = true;
+    const float voltage = ina219.getBusVoltage_V();
+    const float current = ina219.getCurrent_mA() * INA219_MULTIPLIER;
 
-    measurement->variant.environment_metrics.voltage = ina219.getBusVoltage_V();
-    measurement->variant.environment_metrics.current = ina219.getCurrent_mA() * INA219_MULTIPLIER;
+    if (measurement->which_variant == meshtastic_Telemetry_power_metrics_tag) {
+        measurement->variant.power_metrics.has_ch1_voltage = true;
+        measurement->variant.power_metrics.has_ch1_current = true;
+        measurement->variant.power_metrics.ch1_voltage = voltage;
+        measurement->variant.power_metrics.ch1_current = current;
+    } else {
+        measurement->variant.environment_metrics.has_voltage = true;
+        measurement->variant.environment_metrics.has_current = true;
+        measurement->variant.environment_metrics.voltage = voltage;
+        measurement->variant.environment_metrics.current = current;
+    }
+
     return true;
 }
 
